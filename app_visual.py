@@ -12,14 +12,15 @@ st.title("Job Title ↔ Certification Graph")
 # 📂 Load Excel file
 @st.cache_data
 def load_data():
-    path = "MassCEC_Illuminate_Certifications_JTsearch_20240425.xlsx"
-    df = pd.read_excel(path, sheet_name='GeminiReview')
+    path = "certificate_file.csv"
+    df = pd.read_csv(path)
     df = df[df['llm_evaluation'] == 'MATCH'].copy()
     df['parsed_jt'] = df['parsed_jt'].astype(str)
     df['certification_names'] = df['certification'].astype(str)
     return df[['parsed_jt', 'certification_names']]
 
 # 🔗 Build the networkx graph
+@st.cache_data
 def build_graph(network_df):
     jt_cert_map = {}
     for _, row in network_df.iterrows():
