@@ -45,6 +45,12 @@ def build_graph(network_df):
 
     return G
 
+# ✅ Cached full graph (used when filters are empty)
+@st.cache_data
+def build_full_graph():
+    full_df = load_data()
+    return build_graph(full_df)
+
 # 🌐 Generate interactive PyVis graph
 def generate_pyvis_graph(_G):
     net = Network(height="750px", width="100%", bgcolor="#ffffff", font_color="black")
@@ -70,35 +76,40 @@ def generate_pyvis_graph(_G):
 with st.spinner("Loading and building graph..."):
     df = load_data()
 
-    # --- Filters ---
+    # --- Dropdown filters ---
     all_jobs = sorted(df['parsed_jt'].unique())
-    all_certs = sorted({c.strip() for cert_str in df['certification_names'] for c in cert_str.split(';') if c.strip()})
+    all_certs = sorted({c.strip() for s in df['certification_names'] for c in s.split(';') if c.strip()})
 
     selected_jobs = st.multiselect("🔍 Filter by Job Title", all_jobs)
     selected_certs = st.multiselect("📛 Filter by Certification", all_certs)
 
+    # --- Apply Job/Cert filters ---
     filtered_df = df.copy()
     if selected_jobs:
         filtered_df = filtered_df[filtered_df['parsed_jt'].isin(selected_jobs)]
-
     if selected_certs:
         filtered_df = filtered_df[
             filtered_df['certification_names'].apply(
-                lambda x: any(cert.strip() in selected_certs for cert in x.split(';'))
+                lambda x: any(c.strip() in selected_certs for c in x.split(';'))
             )
         ]
 
-    # --- Build graph from filtered data ---
-    G = build_graph(filtered_df)
+    # --- Temporary graph (used for community list and fallback) ---
+    temp_graph = build_graph(filtered_df if selected_jobs or selected_certs else df)
 
     # --- Community filter ---
-    all_communities = sorted(set(nx.get_node_attributes(G, "community").values()))
+    all_communities = sorted(set(nx.get_node_attributes(temp_graph, "community").values()))
     selected_comms = st.multiselect("🧠 Filter by Community ID", all_communities)
 
-    if selected_comms:
-        nodes_to_keep = [n for n, d in G.nodes(data=True) if d.get("community") in selected_comms]
-        G = G.subgraph(nodes_to_keep).copy()
+    # --- Smart graph selection ---
+    if not selected_jobs and not selected_certs and not selected_comms:
+        G = build_full_graph()
+    else:
+        G = temp_graph
+        if selected_comms:
+            nodes_to_keep = [n for n, d in G.nodes(data=True) if d.get("community") in selected_comms]
+            G = G.subgraph(nodes_to_keep).copy()
 
-    # --- Generate and show interactive graph ---
+    # --- Render graph ---
     html = generate_pyvis_graph(G)
     components.html(html, height=750, scrolling=True)
