@@ -12,7 +12,7 @@ st.title("Job Title ↔ Certification Graph")
 # 📂 Load Excel file
 @st.cache_data
 def load_data():
-    path = "/Users/anamerlo/Documents/Julius/MassCEC_Illuminate_Certifications_JTsearch_20240425.xlsx"
+    path = "MassCEC_Illuminate_Certifications_JTsearch_20240425.xlsx"
     df = pd.read_excel(path, sheet_name='GeminiReview')
     df = df[df['llm_evaluation'] == 'MATCH'].copy()
     df['parsed_jt'] = df['parsed_jt'].astype(str)
