@@ -4,3 +4,4 @@ networkx
 pyvis
 openpyxl
 python-louvain
+streamlit-agraph
